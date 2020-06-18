@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/run/current-system/sw/bin/perl
 #######################################################################
 # driver.pl - CS:APP Data Lab driver
 #
@@ -21,10 +21,10 @@ use Driverlib;
 # Set to 1 to use btest, 0 to use the BDD checker.
 my $USE_BTEST = 1;
 
-# Generic settings 
+# Generic settings
 $| = 1;      # Flush stdout each time
 umask(0077); # Files created by the user in tmp readable only by that user
-$ENV{PATH} = "/usr/local/bin:/usr/bin:/bin";
+#$ENV{PATH} = "/usr/local/bin:/usr/bin:/bin";
 
 #
 # usage - print help message and terminate
@@ -42,7 +42,7 @@ sub usage {
 # Main routine
 ##############
 my $login = getlogin() || (getpwuid($<))[0] || "unknown";
-my $tmpdir = "/var/tmp/datalab.$login.$$";
+my $tmpdir = "/tmp/datalab.$login.$$";
 my $diemsg = "The files are in $tmpdir.";
 
 my $driverfiles;
@@ -101,7 +101,7 @@ $nickname = "";
 # Causes the driver to send an autoresult to the server on behalf of user
 if ($opt_u) {
     $nickname = $opt_u;
-	check_nickname($nickname);
+        check_nickname($nickname);
 }
 
 # Hidden flag that indicates that the driver was invoked by an autograder
@@ -113,7 +113,7 @@ if ($opt_A) {
 # Drivers can also define an arbitary number of other command line args
 #
 # Optional hidden flag used by the autograder
-if ($opt_f) {  
+if ($opt_f) {
     $infile = $opt_f;
 }
 
@@ -131,7 +131,7 @@ use strict 'vars';
 # If using the bdd checker, then make sure it exists
 if (!$USE_BTEST) {
     (-e "./bddcheck/cbit/cbit" and -x "./bddcheck/cbit/cbit")
-	or  die "$0: ERROR: No executable cbit binary.\n";
+        or  die "$0: ERROR: No executable cbit binary.\n";
 }
 
 #
@@ -141,7 +141,7 @@ system("mkdir $tmpdir") == 0
     or die "$0: Could not make scratch directory $tmpdir.\n";
 
 # Copy the student's work to the scratch directory
-unless (system("cp $infile $tmpdir/bits.c") == 0) { 
+unless (system("cp $infile $tmpdir/bits.c") == 0) {
     clean($tmpdir);
     die "$0: Could not copy file $infile to scratch directory $tmpdir.\n";
 }
@@ -150,15 +150,15 @@ unless (system("cp $infile $tmpdir/bits.c") == 0) {
 if ($USE_BTEST) {
     $driverfiles = "Makefile dlc btest.c decl.c tests.c btest.h bits.h";
     unless (system("cp -r $driverfiles $tmpdir") == 0) {
-	clean($tmpdir);
-	die "$0: Could not copy autogradingfiles to $tmpdir.\n";
+        clean($tmpdir);
+        die "$0: Could not copy autogradingfiles to $tmpdir.\n";
     }
-} 
+}
 else {
     $driverfiles = "dlc tests.c bddcheck";
     unless (system("cp -r $driverfiles $tmpdir") == 0) {
-	clean($tmpdir);
-	die "$0: Could not copy support files to $tmpdir.\n";
+        clean($tmpdir);
+        die "$0: Could not copy support files to $tmpdir.\n";
     }
 }
 
@@ -188,12 +188,12 @@ if ($USE_BTEST) {
 
     # Compile btest
     system("make btestexplicit") == 0
-	or die "$0: Could not make btest in $tmpdir. $diemsg\n";
+        or die "$0: Could not make btest in $tmpdir. $diemsg\n";
 
     # Run btest
     $status = system("./btest -g > btest-zapped.out 2>&1");
     if ($status != 0) {
-	die "$0: ERROR: btest check failed. $diemsg\n";
+        die "$0: ERROR: btest check failed. $diemsg\n";
     }
 }
 else {
@@ -201,13 +201,13 @@ else {
     system("cp zap-bits.c bits.c");
     $status = system("./bddcheck/check.pl -g > btest-zapped.out 2>&1");
     if ($status != 0) {
-	die "$0: ERROR: BDD check failed. $diemsg\n";
+        die "$0: ERROR: BDD check failed. $diemsg\n";
     }
 }
 
 #
 # Run dlc to identify operator count violations.
-# 
+#
 print "\n3. Running './dlc -Z' to identify operator count violations.\n";
 system("./dlc -Z -o Zap-bits.c save-bits.c") == 0
     or die "$0: ERROR: dlc unable to generated Zapped bits.c file.\n";
@@ -221,13 +221,13 @@ if ($USE_BTEST) {
 
     # Compile btest
     system("make btestexplicit") == 0
-	or die "$0: Could not make btest in $tmpdir. $diemsg\n";
+        or die "$0: Could not make btest in $tmpdir. $diemsg\n";
     print "\n";
 
     # Run btest
     $status = system("./btest -g -r 2 > btest-Zapped.out 2>&1");
     if ($status != 0) {
-	die "$0: ERROR: Zapped btest failed. $diemsg\n";
+        die "$0: ERROR: Zapped btest failed. $diemsg\n";
     }
 }
 else {
@@ -235,7 +235,7 @@ else {
     system("cp Zap-bits.c bits.c");
     $status = system("./bddcheck/check.pl -g -r 2 > btest-Zapped.out 2>&1");
     if ($status != 0) {
-	die "$0: ERROR: Zapped bdd checker failed. $diemsg\n";
+        die "$0: ERROR: Zapped bdd checker failed. $diemsg\n";
     }
 }
 
@@ -247,7 +247,7 @@ $status = system("./dlc -W1 -e zap-bits.c > dlc-opcount.out 2>&1");
 if ($status != 0) {
     die "$0: ERROR: bits.c did not compile. $diemsg\n";
 }
- 
+
 #################################################################
 # Collect the correctness and performance results for each puzzle
 #################################################################
@@ -258,13 +258,13 @@ if ($status != 0) {
 %puzzle_c_points = (); # Correctness score computed by btest
 %puzzle_c_errors = (); # Correctness error discovered by btest
 %puzzle_c_rating = (); # Correctness puzzle rating (max points)
-  
+
 $inpuzzles = 0;      # Becomes true when we start reading puzzle results
 $puzzlecnt = 0;      # Each puzzle gets a unique number
 $total_c_points = 0;
-$total_c_rating = 0; 
+$total_c_rating = 0;
 
-open(INFILE, "$tmpdir/btest-zapped.out") 
+open(INFILE, "$tmpdir/btest-zapped.out")
     or die "$0: ERROR: could not open input file $tmpdir/btest-zapped.out\n";
 
 while ($line = <INFILE>) {
@@ -272,25 +272,25 @@ while ($line = <INFILE>) {
 
     # Notice that we're ready to read the puzzle scores
     if ($line =~ /^Score/) {
-	$inpuzzles = 1;
-	next;
+        $inpuzzles = 1;
+        next;
     }
 
     # Notice that we're through reading the puzzle scores
     if ($line =~ /^Total/) {
-	$inpuzzles = 0;
-	next;
+        $inpuzzles = 0;
+        next;
     }
 
     # Read and record a puzzle's name and score
     if ($inpuzzles) {
-	($blank, $c_points, $c_rating, $c_errors, $name) = split(/\s+/, $line);
-	$puzzle_c_points{$name} = $c_points;
-	$puzzle_c_errors{$name} = $c_errors;
-	$puzzle_c_rating{$name} = $c_rating;
-	$puzzle_number{$name} = $puzzlecnt++;
-	$total_c_points += $c_points;
-	$total_c_rating += $c_rating;
+        ($blank, $c_points, $c_rating, $c_errors, $name) = split(/\s+/, $line);
+        $puzzle_c_points{$name} = $c_points;
+        $puzzle_c_errors{$name} = $c_errors;
+        $puzzle_c_rating{$name} = $c_rating;
+        $puzzle_number{$name} = $puzzlecnt++;
+        $total_c_points += $c_points;
+        $total_c_rating += $c_rating;
     }
 
 }
@@ -302,10 +302,10 @@ close(INFILE);
 %puzzle_p_points = (); # Performance points
 
 $inpuzzles = 0;       # Becomes true when we start reading puzzle results
-$total_p_points = 0;  
+$total_p_points = 0;
 $total_p_rating = 0;
 
-open(INFILE, "$tmpdir/btest-Zapped.out") 
+open(INFILE, "$tmpdir/btest-Zapped.out")
     or die "$0: ERROR: could not open input file $tmpdir/btest-Zapped.out\n";
 
 while ($line = <INFILE>) {
@@ -313,22 +313,22 @@ while ($line = <INFILE>) {
 
     # Notice that we're ready to read the puzzle scores
     if ($line =~ /^Score/) {
-	$inpuzzles = 1;
-	next;
+        $inpuzzles = 1;
+        next;
     }
 
     # Notice that we're through reading the puzzle scores
     if ($line =~ /^Total/) {
-	$inpuzzles = 0;
-	next;
+        $inpuzzles = 0;
+        next;
     }
 
     # Read and record a puzzle's name and score
     if ($inpuzzles) {
-	($blank, $p_points, $p_rating, $p_errors, $name) = split(/\s+/, $line);
-	$puzzle_p_points{$name} = $p_points;
-	$total_p_points += $p_points;
-	$total_p_rating += $p_rating;
+        ($blank, $p_points, $p_rating, $p_errors, $name) = split(/\s+/, $line);
+        $puzzle_p_points{$name} = $p_points;
+        $total_p_points += $p_points;
+        $total_p_rating += $p_rating;
     }
 }
 close(INFILE);
@@ -336,7 +336,7 @@ close(INFILE);
 #
 # Collect the operator counts generated by dlc
 #
-open(INFILE, "$tmpdir/dlc-opcount.out") 
+open(INFILE, "$tmpdir/dlc-opcount.out")
     or die "$0: ERROR: could not open input file $tmpdir/dlc-opcount.out\n";
 
 $tops = 0;
@@ -344,29 +344,29 @@ while ($line = <INFILE>) {
     chomp($line);
 
     if ($line =~ /(\d+) operators/) {
-	($foo, $foo, $foo, $name, $msg) = split(/:/, $line);
-	$puzzle_p_ops{$name} = $1;
-	$tops += $1;
+        ($foo, $foo, $foo, $name, $msg) = split(/:/, $line);
+        $puzzle_p_ops{$name} = $1;
+        $tops += $1;
     }
 }
 close(INFILE);
 
-# 
+#
 # Print a table of results sorted by puzzle number
 #
 print "\n";
 printf("%s\t%s\n", "Correctness Results", "Perf Results");
-printf("%s\t%s\t%s\t%s\t%s\t%s\n", "Points", "Rating", "Errors", 
+printf("%s\t%s\t%s\t%s\t%s\t%s\n", "Points", "Rating", "Errors",
        "Points", "Ops", "Puzzle");
-foreach $name (sort {$puzzle_number{$a} <=> $puzzle_number{$b}} 
-	       keys %puzzle_number) {
-    printf("%d\t%d\t%d\t%d\t%d\t\%s\n", 
-	   $puzzle_c_points{$name},
-	   $puzzle_c_rating{$name},
-	   $puzzle_c_errors{$name},
-	   $puzzle_p_points{$name},
-	   $puzzle_p_ops{$name},
-	   $name);
+foreach $name (sort {$puzzle_number{$a} <=> $puzzle_number{$b}}
+               keys %puzzle_number) {
+    printf("%d\t%d\t%d\t%d\t%d\t\%s\n",
+           $puzzle_c_points{$name},
+           $puzzle_c_rating{$name},
+           $puzzle_c_errors{$name},
+           $puzzle_p_points{$name},
+           $puzzle_p_ops{$name},
+           $name);
 }
 
 $tpoints = $total_c_points + $total_p_points;
@@ -381,9 +381,9 @@ print "\nScore = $tpoints/$trating [$total_c_points/$total_c_rating Corr + $tota
 if ($nickname) {
     # Generate the autoresult
     $autoresult = "$tpoints|$total_c_points|$total_p_points|$tops";
-    foreach $name (sort {$puzzle_number{$a} <=> $puzzle_number{$b}} 
-	       keys %puzzle_number) {
-	$autoresult .= " |$name:$puzzle_c_points{$name}:$puzzle_c_rating{$name}:$puzzle_p_points{$name}:$puzzle_p_ops{$name}";
+    foreach $name (sort {$puzzle_number{$a} <=> $puzzle_number{$b}}
+               keys %puzzle_number) {
+        $autoresult .= " |$name:$puzzle_c_points{$name}:$puzzle_c_rating{$name}:$puzzle_p_points{$name}:$puzzle_p_ops{$name}";
     }
 
     # Post the autoresult to the server. The Linux login id is
@@ -428,7 +428,7 @@ sub check_nickname {
     }
 
 }
-    
+
 #
 # clean - remove the scratch directory
 #
@@ -436,4 +436,3 @@ sub clean {
     my $tmpdir = shift;
     system("rm -rf $tmpdir");
 }
-
