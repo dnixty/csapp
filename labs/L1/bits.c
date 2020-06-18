@@ -53,7 +53,15 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return 2;
+  int mask = 0xAA;
+  mask <<= 8;
+  mask |= 0xAA;
+  mask <<= 8;
+  mask |= 0xAA;
+  mask <<= 8;
+  mask |= 0xAA;
+
+  return !((x&mask)^mask);
 }
 /*
  * negate - return -x
@@ -63,7 +71,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return (~x)+1;
 }
 //3
 /*
