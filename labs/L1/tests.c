@@ -44,10 +44,19 @@ int test_allOddBits(int x) {
    return 0;
   return 1;
 }
+
+
+
+
+
+
+
 int test_negate(int x) {
   return -x;
 }
 //3
+
+
 int test_isAsciiDigit(int x) {
   return (0x30 <= x) && (x <= 0x39);
 }
@@ -70,10 +79,11 @@ int test_howManyBits(int x) {
     a = (unsigned int)x;
     for (cnt=0; a; a>>=1, cnt++)
         ;
+
     return (int)(cnt + 1);
 }
 //float
-unsigned test_float_twice(unsigned uf) {
+unsigned test_floatScale2(unsigned uf) {
   float f = u2f(uf);
   float tf = 2*f;
   if (isnan(f))
@@ -81,12 +91,28 @@ unsigned test_float_twice(unsigned uf) {
   else
     return f2u(tf);
 }
-unsigned test_float_i2f(int x) {
-  float f = (float) x;
-  return f2u(f);
-}
-int test_float_f2i(unsigned uf) {
+int test_floatFloat2Int(unsigned uf) {
   float f = u2f(uf);
   int x = (int) f;
   return x;
+}
+unsigned test_floatPower2(int x) {
+  float result = 1.0;
+  float p2 = 2.0;
+  int recip = (x < 0);
+  /* treat tmin specially */
+  if ((unsigned)x == 0x80000000) {
+      return 0;
+  }
+  if (recip) {
+    x = -x;
+    p2 = 0.5;
+  }
+  while (x > 0) {
+    if (x & 0x1)
+      result = result * p2;
+    p2 = p2 * p2;
+    x >>= 1;
+  }
+  return f2u(result);
 }

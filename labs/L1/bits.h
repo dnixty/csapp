@@ -23,9 +23,9 @@ int test_logicalNeg(int);
 int howManyBits(int);
 int test_howManyBits(int);
 //float
-unsigned float_twice(unsigned);
-unsigned test_float_twice(unsigned);
-unsigned float_i2f(int);
-unsigned test_float_i2f(int);
-int float_f2i(unsigned);
-int test_float_f2i(unsigned);
+unsigned floatScale2(unsigned);
+unsigned test_floatScale2(unsigned);
+int floatFloat2Int(unsigned);
+int test_floatFloat2Int(unsigned);
+unsigned floatPower2(int);
+unsigned test_floatPower2(int);

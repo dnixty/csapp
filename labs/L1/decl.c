@@ -10,12 +10,16 @@
 
 test_rec test_set[] = {
 //1
+
+
+
+
  {"bitXor", (funct_t) bitXor, (funct_t) test_bitXor, 2, "& ~", 14, 1,
   {{TMin, TMax},{TMin,TMax},{TMin,TMax}}},
  {"tmin", (funct_t) tmin, (funct_t) test_tmin, 0, "! ~ & ^ | + << >>", 4, 1,
   {{TMin, TMax},{TMin,TMax},{TMin,TMax}}},
 //2
- {"isTmax", (funct_t) isTmax, (funct_t) test_isTmax, 1, "! ~ & ^ | +", 10, 2,
+ {"isTmax", (funct_t) isTmax, (funct_t) test_isTmax, 1, "! ~ & ^ | +", 10, 1,
   {{TMin, TMax},{TMin,TMax},{TMin,TMax}}},
  {"allOddBits", (funct_t) allOddBits, (funct_t) test_allOddBits, 1,
     "! ~ & ^ | + << >>", 12, 2,
@@ -39,13 +43,13 @@ test_rec test_set[] = {
  {"howManyBits", (funct_t) howManyBits, (funct_t) test_howManyBits, 1, "! ~ & ^ | + << >>", 90, 4,
   {{TMin, TMax},{TMin,TMax},{TMin,TMax}}},
 //float
- {"float_twice", (funct_t) float_twice, (funct_t) test_float_twice, 1,
+ {"floatScale2", (funct_t) floatScale2, (funct_t) test_floatScale2, 1,
     "$", 30, 4,
      {{1, 1},{1,1},{1,1}}},
- {"float_i2f", (funct_t) float_i2f, (funct_t) test_float_i2f, 1,
+ {"floatFloat2Int", (funct_t) floatFloat2Int, (funct_t) test_floatFloat2Int, 1,
     "$", 30, 4,
      {{1, 1},{1,1},{1,1}}},
- {"float_f2i", (funct_t) float_f2i, (funct_t) test_float_f2i, 1,
+ {"floatPower2", (funct_t) floatPower2, (funct_t) test_floatPower2, 1,
     "$", 30, 4,
      {{1, 1},{1,1},{1,1}}},
   {"", NULL, NULL, 0, "", 0, 0,
