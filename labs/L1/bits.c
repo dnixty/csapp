@@ -104,23 +104,8 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  int x_is_neg = (x>>31);
-  int x_is_pos = !x_is_neg;
-  int y_is_neg = (y>>31);
-  int y_is_pos = !y_is_neg;
-  int x_eq_y = (!(x^y));
-  //  int x_op_pos = (~x)+1;
-  //  int x_op_neg = ~(x+(~0));
-  //  int x_op = (x_op_pos&((~(!x_is_neg))+1)) | (x_op_neg&((~(!!x_is_neg))+1));
-  int result = (x_is_neg&y_is_pos)|x_eq_y;
-
-  result |= ((x_is_neg&y_is_neg)&(!((~(x+(~0))+y)>>31)));
-  result |= ((x_is_pos&y_is_pos)&(!(((~x)+1+y)>>31)));
-
-  result &= 1;
-
-
-  return result;
+  int r = (y&(~x)) | (x&y&(~(x+(~0))+y)) | ((~x)&(~y)&((~x)+1+y));
+  return !(r>>31)|(!(x^y));
 }
 //4
 /*
