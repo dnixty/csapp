@@ -84,7 +84,7 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+  return (!((x>>3)^0x6)) | (!((x>>1)^0x1C));
 }
 /*
  * conditional - same as x ? y : z
