@@ -117,7 +117,6 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4
  */
 int logicalNeg(int x) {
-  //  return (~((x>>31)|((~x+1)^x)>>31))&1;
   return (~((x|((~x+1)^x))>>31))&1;
 
 }
