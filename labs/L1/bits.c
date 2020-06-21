@@ -133,104 +133,42 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  int count = 0;
+  int count = 1;
+  int n;
   x = x^(x>>31);
 
-  // 1
-  count += !x;
-  x >>= 1;
-  // 2
-  count += !x;
-  x >>= 1;
-  // 3
-  count += !x;
-  x >>= 1;
-  // 4
-  count += !x;
-  x >>= 1;
-  // 5
-  count += !x;
-  x >>= 1;
-  // 6
-  count += !x;
-  x >>= 1;
-  // 7
-  count += !x;
-  x >>= 1;
-  // 8
-  count += !x;
-  x >>= 1;
-  // 9
-  count += !x;
-  x >>= 1;
-  // 10
-  count += !x;
-  x >>= 1;
-  // 11
-  count += !x;
-  x >>= 1;
-  // 12
-  count += !x;
-  x >>= 1;
-  // 13
-  count += !x;
-  x >>= 1;
-  // 14
-  count += !x;
-  x >>= 1;
-  // 15
-  count += !x;
-  x >>= 1;
-  // 16
-  count += !x;
-  x >>= 1;
-  // 17
-  count += !x;
-  x >>= 1;
-  // 18
-  count += !x;
-  x >>= 1;
-  // 19
-  count += !x;
-  x >>= 1;
-  // 20
-  count += !x;
-  x >>= 1;
-  // 21
-  count += !x;
-  x >>= 1;
-  // 22
-  count += !x;
-  x >>= 1;
-  // 23
-  count += !x;
-  x >>= 1;
-  // 24
-  count += !x;
-  x >>= 1;
-  // 25
-  count += !x;
-  x >>= 1;
-  // 26
-  count += !x;
-  x >>= 1;
-  // 27
-  count += !x;
-  x >>= 1;
-  // 28
-  count += !x;
-  x >>= 1;
-  // 29
-  count += !x;
-  x >>= 1;
-  // 30
-  count += !x;
-  x >>= 1;
-  // 31
-  count += !x;
+  x |= x>>16;
+  x |= x>>8;
+  x |= x>>4;
+  x |= x>>2;
+  x |= x>>1;
 
-  return 33+(~count);
+  n = (!!(x&((0xff<<24)|(0xff<<16))))<<4;
+  x >>= n;
+  count += n;
+
+  n = (!!(x&(0xff<<8)))<<3;
+  x >>= n;
+  count += n;
+
+  n = (!!(x&0xf0))<<2;
+  x >>= n;
+  count += n;
+
+  n = (!!(x&0xc))<<1;
+  x >>= n;
+  count += n;
+
+  n = (!!(x&0x2));
+  x >>= n;
+  count += n;
+
+  n = (!!(x&0x1));
+  count += n;
+
+  return count;
 }
+
 //float
 /*
  * floatScale2 - Return bit-level equivalent of expression 2*f for
