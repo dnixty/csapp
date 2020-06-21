@@ -133,105 +133,103 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  int count = 1;
-  int negCount = 1;
-
+  int count = 0;
   x = x^(x>>31);
 
   // 1
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 2
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 3
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 4
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 5
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 6
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 7
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 8
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 9
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 10
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 11
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 12
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 13
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 14
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 15
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 16
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 17
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 18
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 19
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 20
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 21
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 22
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 23
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 24
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 25
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 26
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 27
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 28
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 29
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 30
-  count += !!x;
+  count += !x;
   x >>= 1;
   // 31
-  count += !!x;
+  count += !x;
 
-  return count;
+  return 33+(~count);
 }
 //float
 /*
