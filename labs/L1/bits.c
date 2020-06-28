@@ -182,7 +182,18 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+    unsigned s = uf>>31;
+    unsigned e = ((uf<<1)>>24);
+    unsigned f = uf&0x7fffff;
+
+    if (e == 0xff)
+        return uf;
+    else if (e)
+        e += 1;
+    else
+        f <<= 1;
+
+    return (s<<31)|(e<<23)|f;
 }
 /*
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -190,14 +201,28 @@ unsigned floatScale2(unsigned uf) {
  *   Argument is passed as unsigned int, but
  *   it is to be interpreted as the bit-level representation of a
  *   single-precision floating point value.
- *   Anything out of range (including NaN and infinity) should return
+ *   Anything out of range (includxing NaN and infinity) should return
  *   0x80000000u.
  *   Legal ops: Any integer/unsigned operations incl. ||, &&. also if, while
  *   Max ops: 30
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+    unsigned s = uf>>31;
+    unsigned e = ((uf<<1)>>24);
+    unsigned f = uf&0x7fffff;
+    unsigned r;
+
+    if (e > 126 && e <= 150) {
+        r = (f|0x800000)>>(150-e);
+        if (s)
+            r = (~r) + 1;
+    }
+    else if (e > 150)
+        r = 0x80000000u;
+    else
+        r = 0;
+    return r;
 }
 /*
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -213,5 +238,12 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    // implement negative values
+    if (x>=128)
+        return 0x7f800000;
+    else if (x < 0) {
+        return 0;
+    }
+    else
+        return (x+0x7f)<<23;
 }
