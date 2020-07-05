@@ -1,0 +1,17 @@
+k = 15
+n = 63
+
+bias = 2^(k-1)-1 = 16383
+
+Smallest positive denormalized
+V = 2^(1-bias-n)
+V = 2^(1-16383-63) = 2^(-16445)
+
+Smallest positive normalized
+V = 2^(1-bias)
+V = 2^(-16382)
+
+Largest normalized
+V = (1-2^(-n-1)) * 2^(2^(k-1))
+V = (1-2^-64) * (2^(2^14))
+V = (1-2^-64) * 2^16384
