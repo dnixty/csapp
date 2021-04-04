@@ -354,13 +354,15 @@ void do_bgfg(char **argv)
 void waitfg(pid_t pid)
 {
     struct job_t *job;
+    sigset_t mask;
+    sigemptyset(&mask);
 
     while (1) {
         job = getjobpid(jobs, pid);
         if (job == NULL || job->state != FG)
             break;
         else
-            sleep(1);
+            sigsuspend(&mask);
     }
 }
 
