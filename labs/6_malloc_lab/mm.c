@@ -18,7 +18,7 @@
 #include "mm.h"
 #include "memlib.h"
 
-/* #define DEBUG 1 */
+#define DEBUG 1
 
 team_t team = {
     "selfstudy",
@@ -34,8 +34,11 @@ static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
 static void insertfb(void *bp);
 static void removefb(void *bp);
+#ifdef DEBUG
 static void print_fblk_list();
-static int mm_check(void);
+static int mm_checkheap(void);
+static int find_fbp(void *fbp);
+#endif
 
 static char *heap_listp; /* Prologue block pointer */
 static char *fblk_listp; /* Free blocks pointer */
@@ -102,8 +105,9 @@ int mm_init(void)
 }
 
 /*
- * extend_heap - TODO: write description
- *
+ * extend_heap - Extend heap by words * WSIZE by creating new block. The
+ * new block coalesces any preceding free block and then is being
+ * inserted into block into the list of free blocks
  */
 static void *extend_heap(size_t words)
 {
@@ -164,11 +168,15 @@ void *mm_malloc(size_t size)
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
     place(bp, asize);
+#ifdef DEBUG
+    mm_checkheap();
+#endif
     return bp;
 }
 
 /*
- * mm_free
+ * mm_free - Free an alocated block and coalesce other adjacent free
+ * blocks
  */
 void mm_free(void *bp)
 {
@@ -185,7 +193,7 @@ void mm_free(void *bp)
 }
 
 /*
- * coalesce - TODO: write description
+ * coalesce - join other adjacent free blocks into the bp
  *
  */
 static void *coalesce(void *bp)
@@ -244,6 +252,9 @@ static void *coalesce(void *bp)
     return bp;
 }
 
+/*
+ * find_fit - Find first free block with size larger or equal to asize.
+ */
 static void *find_fit(size_t asize)
 {
     void *bp = fblk_listp;
@@ -266,6 +277,10 @@ static void *find_fit(size_t asize)
     return NULL;                /* No fit */
 }
 
+/*
+ * place - Alocate free block and remove it from fblk_listp. If the
+ * remainer is smaller than 3*DSIZE then allocate the whole block.
+ */
 static void place(void *bp, size_t asize)
 {
 
@@ -292,6 +307,9 @@ static void place(void *bp, size_t asize)
     }
 }
 
+/*
+ * insertfb - Insert given block into the beginning of fblk_listp
+ */
 static void insertfb(void *bp)
 {
 #ifdef DEBUG
@@ -303,11 +321,6 @@ static void insertfb(void *bp)
         PUT(PVFB(GET(NXFB(fblk_listp))), (unsigned int)bp);
     PUT(NXFB(fblk_listp), (unsigned int)bp);
     PUT(PVFB(bp), (unsigned int)fblk_listp);
-
-
-/* #ifdef DEBUG
- *     print_fblk_list();
- * #endif */
 }
 
 static void removefb(void *bp)
@@ -333,14 +346,14 @@ static void removefb(void *bp)
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
-void *mm_realloc(void *ptr, size_t size)
+void *mm_realloc(void *bp, size_t size)
 {
-    void *oldptr = ptr;
+    void *oldptr = bp;
     void *newptr;
     size_t copySize;
 
 #ifdef DEBUG
-    printf("** mm_realloc(%x, %d) **\n", (unsigned int)ptr, size);
+    printf("** mm_realloc(%x, %d) **\n", (unsigned int)bp, size);
 #endif
 
     newptr = mm_malloc(size);
@@ -355,14 +368,14 @@ void *mm_realloc(void *ptr, size_t size)
 
 }
 
+#ifdef DEBUG
 /*
- * print_fblk_list
+ * print_fblk_list - Print all free blocks
  */
 static void print_fblk_list(void)
 {
     void *bp = fblk_listp;
 
-    printf("\t__FBLK_LIST__\n");
     while (1) {
         printf("\t[%x]\tH:%d F:%d N:%x P:%x\n",
                (unsigned int)bp, GET(HDRP(bp)), GET(FTRP(bp)), GET(NXFB(bp)), GET(PVFB(bp)));
@@ -373,7 +386,86 @@ static void print_fblk_list(void)
     printf("\n");
 }
 
-int mm_check(void)
+static int mm_checkheap(void)
 {
-    return 0;
+    void *bp, *fbp;
+
+    /* Check if the prologue block is correct */
+    if (heap_listp != (char *)mem_heap_lo() + (6*WSIZE)) {
+        printf("heap error: the prologue block is not in the correct position.\n");
+        exit(1);
+    }
+
+    /* Check if the epilogue block is correct */
+    if (GET(HDRP(mem_heap_hi()+1)) != 1) {
+        printf("heap error: the epilogue block is not in the correct position.\n");
+        exit(1);
+    }
+
+    for (bp = heap_listp; GET_SIZE(HDRP(bp)) != 0; bp = NEXT_BLKP(bp)) {
+        /* Check if the header matches the footer  */
+        if (GET(HDRP(bp)) != GET(FTRP(bp))) {
+            printf("heap error: %x header and footer are different\n", (unsigned int)bp);
+            exit(1);
+        }
+        /* Check if payload is aligned properly */
+        if (((bp - mem_heap_lo()) % DSIZE) != 0) {
+            printf("heap error: block %x is not aligned to %d bytes\n", (unsigned int)bp, DSIZE);
+            exit(1);
+        }
+
+        if (GET_ALLOC(HDRP(bp)) == 0) {
+            /* Check if all free blocks are in the fblk_listp */
+            if(find_fbp(bp) != 0) {
+                printf("heap error: free block %x is not in the fblk_listp.\n", (unsigned int)bp);
+                exit(1);
+            }
+            /* Check that there are no contiguous free blocks in the
+           memory */
+            if (GET_ALLOC(HDRP(NEXT_BLKP(bp))) == 0) {
+                printf("heap error: contiguous blocks %x and %x are free.\n", (unsigned int)bp, (unsigned int)NEXT_BLKP(bp));
+                exit(1);
+            }
+
+        }
+
+    }
+
+    bp = fblk_listp;
+    while (1) {
+        if ((fbp = (void *)GET(NXFB(bp))) == 0)
+            break;
+        /* Check that next/prev pointers to consecutive free blocks are
+           consistent */
+        if (GET(PVFB(fbp)) != (unsigned int)bp) {
+            printf("heap error: %x and %x next/prev pointers are inconsistent.\n", (unsigned int)bp, (unsigned int)fbp);
+            exit(1);
+        }
+        /* Check that the free block is not allocated */
+        if (GET_ALLOC(HDRP(bp)) == 1) {
+            printf("heap error: free block %x is allocated.\n", (unsigned int)bp);
+            exit(1);
+        }
+        bp = (void *)GET(NXFB(bp));
+    }
+
+
+    return 1;
 }
+
+/*
+ * find_fbp - Find fbp in fblk_listp. Return 0 if exists, otherwise 1.
+ */
+static int find_fbp(void *fbp)
+{
+    void *bp = fblk_listp;
+
+    while (1) {
+        if ((unsigned int)fbp == (unsigned int)bp)
+            return 0;
+        if (GET(NXFB(bp)) == 0)
+            return 1;
+        bp = (void *)GET(NXFB(bp));
+    }
+}
+#endif
