@@ -21,10 +21,12 @@ static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64;
 void
 doit(int fd)
 {
+        int clientfd;
         char buf[MAXLINE], method[MAXLINE], uri[MAXLINE],
-                host[MAXLINE], path[MAXLINE], version[MAXLINE];
+                host[MAXLINE], path[MAXLINE], version[MAXLINE],
+                clientreq[MAXLINE];
         char *hdrs;
-        rio_t rio;
+        rio_t rio, clientrio;
 
         hdrs = (char *)Malloc(MAX_HDRS*sizeof(char));
         strcpy(hdrs, "");
@@ -33,7 +35,7 @@ doit(int fd)
         Rio_readinitb(&rio, fd);
         if (!Rio_readlineb(&rio, buf, MAXLINE))
                 printf("TODO: HANDLE ERROR\n");
-        printf("INCOMING REQUEST:\n");
+        printf("\nINCOMING REQUEST:\n");
         printf("%s", buf);
         sscanf(buf, "%s %s %s", method, uri, version);
 
@@ -56,10 +58,25 @@ doit(int fd)
         if (!parse_requesthdrs(&rio, hdrs, host))
                 printf("TODO: HANDLE ERROR\n");
 
-        printf("OUTGOING REQUEST: \n");
-        printf("%s http://%s%s HTTP/1.0\r\n", method, host, path);
-        printf("%s\n", hdrs);
+        strcpy(clientreq, method);
+        strcat(clientreq, " http://");
+        strcat(clientreq, host);
+        strcat(clientreq, path);
+        strcat(clientreq, " HTTP/1.0\r\n");
+        printf("\nOUTGOING REQUEST: \n");
+        printf("%s", clientreq);
+        printf("%s", hdrs);
 
+        clientfd = Open_clientfd(host, "80");
+        Rio_readinitb(&clientrio, clientfd);
+        Rio_writen(clientfd, clientreq, strlen(clientreq));
+        Rio_writen(clientfd, hdrs, strlen(hdrs));
+
+        while (Rio_readlineb(&clientrio, buf, MAXLINE)) {
+                Rio_writen(fd, buf, strlen(buf));
+        }
+
+        Close(clientfd);
         Free(hdrs);
 }
 
@@ -173,6 +190,8 @@ int parse_requesthdrs(rio_t *rp, char *hdrs, char *host)
                 strcat(hdrs, host);
                 strcat(hdrs, "\r\n");
         }
+
+        strcat(hdrs, "\r\n");
 
         return 1;
 }
