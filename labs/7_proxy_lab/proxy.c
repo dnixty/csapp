@@ -6,6 +6,7 @@
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
 #define MAX_OBJECT_SIZE 102400
+#define MAX_HDRS 102400
 
 void doit(int fd);
 int is_valid_method(char *method);
@@ -13,20 +14,26 @@ int is_valid_version(char *version);
 int is_absolute_uri(char *uri);
 int is_absolute_path(char *uri);
 int parse_uri(char *uri, char *host, char *path);
+int parse_requesthdrs(rio_t *rp, char *hdrs, char *host);
 
-/* static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n"; */
+static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
 
 void
 doit(int fd)
 {
         char buf[MAXLINE], method[MAXLINE], uri[MAXLINE],
                 host[MAXLINE], path[MAXLINE], version[MAXLINE];
+        char *hdrs;
         rio_t rio;
+
+        hdrs = (char *)Malloc(MAX_HDRS*sizeof(char));
+        strcpy(hdrs, "");
 
         /* read request */
         Rio_readinitb(&rio, fd);
         if (!Rio_readlineb(&rio, buf, MAXLINE))
                 printf("TODO: HANDLE ERROR\n");
+        printf("INCOMING REQUEST:\n");
         printf("%s", buf);
         sscanf(buf, "%s %s %s", method, uri, version);
 
@@ -45,13 +52,15 @@ doit(int fd)
         if (!parse_uri(uri, host, path))
                 printf("TODO: HANDLE ERROR\n");
 
-        printf("host: %s\n", host);
-        printf("path: %s\n", path);
-
         /* Read headers */
+        if (!parse_requesthdrs(&rio, hdrs, host))
+                printf("TODO: HANDLE ERROR\n");
 
+        printf("OUTGOING REQUEST: \n");
+        printf("%s http://%s%s HTTP/1.0\r\n", method, host, path);
+        printf("%s\n", hdrs);
 
-
+        Free(hdrs);
 }
 
 int
@@ -106,6 +115,67 @@ parse_uri(char *uri, char *host, char *path)
         return 0;
 }
 
+/*
+ * parse_requesthdrs - Parse request headers and store the result in
+ * hdrs. If headers provide "Host" header, the value will be extracted
+ * and will replace host. Returns 1 if parsing was successful. Otherwise
+ * it returns 0.
+ */
+int parse_requesthdrs(rio_t *rp, char *hdrs, char *host)
+{
+        char *ptr, *keyp;
+        int host_exst;
+        char buf[MAXLINE], buf_dup[MAXLINE];
+
+        host_exst = 0;
+        Rio_readlineb(rp, buf, MAXLINE);
+
+        strcat(hdrs, "User-Agent: ");
+        strcat(hdrs, user_agent_hdr);
+        strcat(hdrs, "Connection: close\r\n");
+        strcat(hdrs, "Proxy-Connection: close\r\n");
+
+        while (strcmp(buf, "\r\n")) {
+                printf("%s", buf);
+                if((ptr = strchr(buf, ':')) == NULL)
+                        return 0;
+                *ptr++ = '\0';
+                while(*ptr == ' ' || *ptr == '\t')
+                        ptr++;
+
+                strcpy(buf_dup, buf);
+                for (keyp = buf_dup; *keyp; keyp++)
+                        *keyp = tolower(*keyp);
+
+                if (strstr(buf_dup, "host")) {
+                        host_exst = 1;
+                        strcpy(host, ptr);
+                        *(host+strlen(host)-2) = '\0'; /* Remove CLRS */
+                }
+
+                /* Skip preset headers */
+                if (strstr(buf_dup, "user-agent") ||
+                    strstr(buf_dup, "connection") ||
+                    strstr(buf_dup, "proxy-connection")) {
+                        Rio_readlineb(rp, buf, MAXLINE);
+                        continue;
+                }
+
+                strcat(hdrs, buf); /* Key */
+                strcat(hdrs, ": ");
+                strcat(hdrs, ptr); /* Value */
+
+                Rio_readlineb(rp, buf, MAXLINE);
+        }
+
+        if (!host_exst) {
+                strcat(hdrs, "Host: ");
+                strcat(hdrs, host);
+                strcat(hdrs, "\r\n");
+        }
+
+        return 1;
+}
 
 int
 main(int argc, char **argv)
