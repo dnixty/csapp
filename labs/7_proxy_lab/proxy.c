@@ -4,7 +4,6 @@
 #include "csapp.h"
 #include "sbuf.h"
 
-/* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
 #define MAX_OBJECT_SIZE 102400
 #define MAX_HDRS 102400
