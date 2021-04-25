@@ -19,6 +19,8 @@ int is_absolute_uri(char *uri);
 int is_absolute_path(char *uri);
 int parse_uri(char *uri, char *host, char *path);
 int parse_requesthdrs(rio_t *rp, char *hdrs, char *host);
+void clienterror(int fd, char *cause, char *errnum,
+         char *shortmsg, char *longmsg);
 
 static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
 
@@ -54,7 +56,8 @@ doit(int fd)
         /* read request */
         Rio_readinitb(&rio, fd);
         if (!Rio_readlineb(&rio, buf, MAXLINE))
-                printf("TODO: HANDLE ERROR\n");
+                clienterror(fd, buf, "400", "Bad Request",
+                            "The server could not understand the request due to invalid syntax.");
         printf("\nINCOMING REQUEST:\n");
         printf("%s", buf);
         sscanf(buf, "%s %s %s", method, uri, version);
@@ -64,19 +67,25 @@ doit(int fd)
         for ( ; *urip; urip++)
                 *urip = tolower(*urip);
 
-        /* check if the method and version is valid */
-        if (!(is_valid_method(method) &&
-              is_valid_version(version))) {
-                printf("TODO: HANDLE ERROR\n");
-        }
+        /* check if method is valid */
+        if (!is_valid_method(method))
+                clienterror(fd, method, "501", "Not Implemented",
+                            "Proxy does not implement this method.");
+
+        /* check if version is valid */
+        if (!is_valid_version(version))
+                clienterror(fd, version, "501", "Not Implemented",
+                            "Proxy does not implement this version.");
 
         /* parse uri */
         if (!parse_uri(uri, host, path))
-                printf("TODO: HANDLE ERROR\n");
+                clienterror(fd, uri, "400", "Bad Request",
+                            "The server could not understand the request due to invalid syntax.");
 
         /* Read headers */
         if (!parse_requesthdrs(&rio, hdrs, host))
-                printf("TODO: HANDLE ERROR\n");
+                clienterror(fd, hdrs, "400", "Bad Request",
+                            "The server could not understand the request due to invalid syntax.");
 
         strcpy(clientreq, method);
         strcat(clientreq, " ");
@@ -221,6 +230,31 @@ int parse_requesthdrs(rio_t *rp, char *hdrs, char *host)
         strcat(hdrs, "\r\n");
 
         return 1;
+}
+
+void
+clienterror(int fd, char *cause, char *errnum,
+         char *shortmsg, char *longmsg)
+{
+    char buf[MAXLINE];
+
+    /* Print the HTTP response headers */
+    sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
+    Rio_writen(fd, buf, strlen(buf));
+    sprintf(buf, "Content-type: text/html\r\n\r\n");
+    Rio_writen(fd, buf, strlen(buf));
+
+    /* Print the HTTP response body */
+    sprintf(buf, "<html><title>Tiny Error</title>");
+    Rio_writen(fd, buf, strlen(buf));
+    sprintf(buf, "<body bgcolor=""ffffff"">\r\n");
+    Rio_writen(fd, buf, strlen(buf));
+    sprintf(buf, "%s: %s\r\n", errnum, shortmsg);
+    Rio_writen(fd, buf, strlen(buf));
+    sprintf(buf, "<p>%s: %s\r\n", longmsg, cause);
+    Rio_writen(fd, buf, strlen(buf));
+    sprintf(buf, "<hr><em>The Tiny Web server</em>\r\n");
+    Rio_writen(fd, buf, strlen(buf));
 }
 
 int
