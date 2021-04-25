@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include "csapp.h"
 #include "sbuf.h"
+#include "cache.h"
 
 #define MAX_CACHE_SIZE 1049000
 #define MAX_OBJECT_SIZE 102400
@@ -23,7 +24,8 @@ void clienterror(int fd, char *cause, char *errnum,
 
 static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
 
-sbuf_t sbuf;                    /* Shared buffer of connected descriptors */
+cache *ca;                  /* Cache pointer */
+sbuf_t sbuf;                /* Shared buffer of connected descriptors */
 
 void
 *thread(void *vargp)
@@ -41,11 +43,13 @@ void
 void
 doit(int fd)
 {
-        int clientfd;
+        int clientfd, cachebufsize, n;
         char *ptr;
+        struct cache_node *nodep;
         char buf[MAXLINE], method[MAXLINE], uri[MAXLINE],
                 host[MAXLINE], port[MAXLINE], path[MAXLINE],
-                version[MAXLINE], clientreq[MAXLINE];
+                version[MAXLINE], clientreq[MAXLINE],
+                cachebuf[MAX_OBJECT_SIZE];
         char *hdrs;
         rio_t rio, clientrio;
 
@@ -101,17 +105,32 @@ doit(int fd)
                 strcpy(port, "80");
         }
 
+        strcpy(uri, host);
+        strcat(uri, path);
 
-        clientfd = Open_clientfd(host, port);
-        Rio_readinitb(&clientrio, clientfd);
-        Rio_writen(clientfd, clientreq, strlen(clientreq));
-        Rio_writen(clientfd, hdrs, strlen(hdrs));
+        if ((nodep = cache_find(ca, uri)) != NULL) {
+                Rio_writen(fd, nodep->content, nodep->size);
+        } else {
+                clientfd = Open_clientfd(host, port);
+                Rio_readinitb(&clientrio, clientfd);
+                Rio_writen(clientfd, clientreq, strlen(clientreq));
+                Rio_writen(clientfd, hdrs, strlen(hdrs));
 
-        while (Rio_readnb(&clientrio, buf, MAXLINE)) {
-                Rio_writen(fd, buf, MAXLINE);
+                cachebufsize = 0;
+                while ((n = Rio_readnb(&clientrio, buf, MAXLINE)) > 0) {
+                        Rio_writen(fd, buf, MAXLINE);
+                        if (cachebufsize + n > MAX_OBJECT_SIZE) {
+                                cachebufsize = 0;
+                                continue;
+                        }
+                        memcpy(cachebuf + cachebufsize, buf, n);
+                        cachebufsize += n;
+
+                }
+                if (cachebufsize > 0)
+                        cache_insert(ca, uri, cachebuf, cachebufsize);
+                Close(clientfd);
         }
-
-        Close(clientfd);
         Free(hdrs);
 }
 
@@ -273,6 +292,8 @@ main(int argc, char **argv)
         listenfd = Open_listenfd(argv[1]);
 
         sbuf_init(&sbuf, SBUFSIZE);
+        ca = cache_init(MAX_CACHE_SIZE, MAX_OBJECT_SIZE);
+
         for (i = 0; i < NTHREADS; i++) /* Create worker threads */
                 Pthread_create(&tid, NULL, thread, NULL);
 
@@ -284,4 +305,5 @@ main(int argc, char **argv)
                 printf("Accepted connection from (%s, %s)\n", hostname, port);
                 sbuf_insert(&sbuf, connfd); /* Insert connfd in buffer */
         }
+        cache_deinit(ca);
 }

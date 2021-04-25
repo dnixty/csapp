@@ -10,6 +10,7 @@ cache_init(unsigned int max_cache_size, unsigned int max_object_size)
         ca->size_total = 0;
         ca->max_cache_size = max_cache_size;
         ca->max_object_size = max_object_size;
+        Sem_init(&ca->mutex, 0, 1);
         return ca;
 }
 
@@ -34,11 +35,15 @@ int
 cache_insert(cache *ca, char *uri, char *buf, unsigned int size)
 {
         struct cache_node *new, *tail;
+#ifdef DEBUG
+        printf("Inserting %s into cache\n", uri);
+#endif
 
         if (size > ca->max_object_size)
                 return -1;
 
         if (ca->size_total + size > ca->max_cache_size) {
+                P(&ca->mutex);
                 tail = ca->tail;
                 if(tail->prev)
                         tail->prev->next = NULL;
@@ -46,6 +51,7 @@ cache_insert(cache *ca, char *uri, char *buf, unsigned int size)
                 Free(tail->content);
                 ca->size_total -= tail->size;
                 ca->tail = tail->prev;
+                V(&ca->mutex);
                 return cache_insert(ca, uri, buf, size);
         }
 
@@ -60,31 +66,35 @@ cache_insert(cache *ca, char *uri, char *buf, unsigned int size)
         strcpy(new->uri, uri);
         memcpy(new->content, buf, size);
 
+        P(&ca->mutex);
         if (ca->head)
                 ca->head->prev = new;
         if (!ca->tail)
                 ca->tail = new;
         ca->head = new;
         ca->size_total += size;
+        V(&ca->mutex);
         return 0;
 }
 
-int
-cache_find(cache *ca, char *uri, char **buf)
+struct cache_node *
+cache_find(cache *ca, char *uri)
 {
         struct cache_node *node;
+#ifdef DEBUG
+        printf("Searching %s in cache:\n", uri);
+#endif
 
         node = ca->head;
 
         while (node != NULL) {
                 if (!strcmp(node->uri, uri)) {
-                        *buf = node->content;
-                        return node->size;
+                        return node;
                 }
                 node = node->next;
         }
 
-        return -1;
+        return NULL;
 }
 
 void

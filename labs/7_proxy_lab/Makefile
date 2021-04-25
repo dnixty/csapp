@@ -22,8 +22,8 @@ cache.o: cache.c cache.h csapp.h
 proxy.o: proxy.c csapp.h
 	$(CC) $(CFLAGS) -c proxy.c
 
-proxy: proxy.o sbuf.o csapp.o
-	$(CC) $(CFLAGS) proxy.o sbuf.o csapp.o -o proxy $(LDFLAGS)
+proxy: proxy.o cache.o sbuf.o csapp.o
+	$(CC) $(CFLAGS) proxy.o cache.o sbuf.o csapp.o -o proxy $(LDFLAGS)
 
 cache_test: cache_test.o cache.o csapp.o
 	$(CC) $(CFLAGS) cache_test.o cache.o csapp.o -o cache_test $(LDFLAGS)
