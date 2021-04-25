@@ -2,12 +2,16 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "csapp.h"
+#include "sbuf.h"
 
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
 #define MAX_OBJECT_SIZE 102400
 #define MAX_HDRS 102400
+#define NTHREADS 4
+#define SBUFSIZE 16
 
+void *thread(void *vargp);
 void doit(int fd);
 int is_valid_method(char *method);
 int is_valid_version(char *version);
@@ -18,13 +22,29 @@ int parse_requesthdrs(rio_t *rp, char *hdrs, char *host);
 
 static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\r\n";
 
+sbuf_t sbuf;                    /* Shared buffer of connected descriptors */
+
+void
+*thread(void *vargp)
+{
+        int connfd;
+
+        Pthread_detach(pthread_self());
+        while (1) {
+                connfd = sbuf_remove(&sbuf); /* Remove connfd from buffer */
+                doit(connfd);
+                Close(connfd);
+        }
+}
+
 void
 doit(int fd)
 {
         int clientfd;
+        char *ptr;
         char buf[MAXLINE], method[MAXLINE], uri[MAXLINE],
-                host[MAXLINE], path[MAXLINE], version[MAXLINE],
-                clientreq[MAXLINE];
+                host[MAXLINE], port[MAXLINE], path[MAXLINE],
+                version[MAXLINE], clientreq[MAXLINE];
         char *hdrs;
         rio_t rio, clientrio;
 
@@ -59,21 +79,28 @@ doit(int fd)
                 printf("TODO: HANDLE ERROR\n");
 
         strcpy(clientreq, method);
-        strcat(clientreq, " http://");
-        strcat(clientreq, host);
+        strcat(clientreq, " ");
         strcat(clientreq, path);
         strcat(clientreq, " HTTP/1.0\r\n");
         printf("\nOUTGOING REQUEST: \n");
         printf("%s", clientreq);
         printf("%s", hdrs);
 
-        clientfd = Open_clientfd(host, "80");
+        if ((ptr = strchr(host, ':')) != NULL) {
+                *ptr = '\0';
+                strcpy(port, ptr+1);
+        } else {
+                strcpy(port, "80");
+        }
+
+
+        clientfd = Open_clientfd(host, port);
         Rio_readinitb(&clientrio, clientfd);
         Rio_writen(clientfd, clientreq, strlen(clientreq));
         Rio_writen(clientfd, hdrs, strlen(hdrs));
 
-        while (Rio_readlineb(&clientrio, buf, MAXLINE)) {
-                Rio_writen(fd, buf, strlen(buf));
+        while (Rio_readnb(&clientrio, buf, MAXLINE)) {
+                Rio_writen(fd, buf, MAXLINE);
         }
 
         Close(clientfd);
@@ -199,9 +226,10 @@ int parse_requesthdrs(rio_t *rp, char *hdrs, char *host)
 int
 main(int argc, char **argv)
 {
-        int listenfd, connfd;
+        int i, listenfd, connfd;
         char hostname[MAXLINE], port[MAXLINE];
         socklen_t clientlen;
+        pthread_t tid;
         struct sockaddr_storage clientaddr;
 
         if (argc != 2) {
@@ -210,14 +238,17 @@ main(int argc, char **argv)
         }
 
         listenfd = Open_listenfd(argv[1]);
+
+        sbuf_init(&sbuf, SBUFSIZE);
+        for (i = 0; i < NTHREADS; i++) /* Create worker threads */
+                Pthread_create(&tid, NULL, thread, NULL);
+
         while (1) {
                 clientlen = sizeof(clientaddr);
                 connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
                 Getnameinfo((SA *) &clientaddr, clientlen, hostname,
                             MAXLINE, port, MAXLINE, 0);
                 printf("Accepted connection from (%s, %s)\n", hostname, port);
-                doit(connfd);
-                Close(connfd);
+                sbuf_insert(&sbuf, connfd); /* Insert connfd in buffer */
         }
-        return 0;
 }
